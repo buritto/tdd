@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using FluentAssertions;
 using NUnit.Framework;
+using NUnit.Framework.Constraints;
 
 namespace WindowsFormsApp1
 {
@@ -13,130 +14,198 @@ namespace WindowsFormsApp1
     [TestFixture]
     public class TestClass
     {
-        public Point center = new Point(100, 100);
+        public Point centerWindow = new Point(50, 50);
 
 
         [Test]
         public void BuildRectangleInCenter()
         {
-            var c = new CircularCloudLayouter(center);
-            var sizeRectangle = new Size(10, 10);
+            var center = new Point(500, 500);
+            var size = new Size(123, 321);
+            var c = new CircularCloudLayouter(center, 1000, 1000);
 
-            var actualRectangle = c.PutNextRectangle(sizeRectangle);
-            var expceptedRectangle = new Rectangle(new Point(center.X + 5, center.Y + 5), sizeRectangle);
+            var actualRectangle = c.PutNextRectangle(size);
 
-            Assert.AreEqual(expceptedRectangle, actualRectangle);
+            var expectedRectangle = new Rectangle(
+                new Point(center.X - size.Width / 2, center.Y - size.Height / 2), size);
+
+            actualRectangle.Should().Be(expectedRectangle);
+
         }
 
-
-        public Rectangle BuildRectangle(Size recSize, double angle)
+        [Test]
+        public void NotIntersection()
         {
-            var x = angle * Math.Cos(angle) + center.X + recSize.Width / 2;
-            var y = angle * Math.Sin(angle) + center.Y + recSize.Height / 2;
-            return new Rectangle(new Point((int) x, (int) y), recSize);
-        }
+            var center = new Point(500, 500);
+            var c = new CircularCloudLayouter(center, 1000, 1000);
 
-        [TestCase(10, 10, 20)]
-        [TestCase(1, 1, 40)]
-        [TestCase(10, 5, 20)]
-        [TestCase(5 , 10, 20)]
-        public void BuildSameRectangle(int width,int height , int countRectangle)
-        {
-            var c = new CircularCloudLayouter(center);
-            var sizeRectangle = new Size(width, height);
-            var setExpectedRectangle = new List<Rectangle>();
-            var step = 0.1;
+            var rectangles = new List<Rectangle>();
 
-            for (var angle = 0.0; angle < countRectangle * countRectangle; angle += step)
+            var differentSizes = new List<Size>()
             {
+                new Size(123, 321),
+                new Size(435, 432),
+                new Size(1, 1),
+                new Size(22, 33),
+                new Size(100, 100),
+                new Size(1, 400),
+                new Size(400, 1)
+            };
 
-                setExpectedRectangle.Add(BuildRectangle(sizeRectangle, angle));
+            foreach (var size in differentSizes)
+            {
+                rectangles.Add(c.PutNextRectangle(size));
             }
 
-            var setActualRectangle = new List<Rectangle>();
-
-            for (int i = 0; i < countRectangle; i++)
+            foreach (var rec in rectangles)
             {
-                setActualRectangle.Add(c.PutNextRectangle(sizeRectangle));
+                Assert.IsFalse(rectangles.Any(rec1 => rec1.IntersectsWith(rec) && rec1 != rec));
             }
-
-            setActualRectangle.Distinct().Should().BeSubsetOf(setExpectedRectangle.Distinct());
-            setActualRectangle.Distinct().Count().Should().Be(countRectangle);
         }
 
-        [TestCase(100, 5)]
-        [TestCase(100, 25)]
-        [TestCase(100, 1)]
-        [TestCase(100, 50)]
-        [TestCase(100, 80)]
-        public void BuildDifferentRectangle(int countRectangle, int countDifferentRepresentative)
+        [Test]
+        public void BuildBigRectangleInLittleWindow()
         {
-            var setExpectedRectangles = new List<Rectangle>();
-            var setActualRectangles = new List<Rectangle>();
-            var c = new CircularCloudLayouter(center);
+            var center = new Point(5, 5);
+            var c = new CircularCloudLayouter(center, 10, 20);
 
-            var rnd = new Random();
-            for (int representative = 0; representative < countDifferentRepresentative; representative++)
-            {
-                var width  = rnd.Next(10, 100);
-                var height = rnd.Next(10, 100);
-                for (int i = 0; i < countRectangle / countDifferentRepresentative; i++)
-                {
-                    setActualRectangles.Add(c.PutNextRectangle(new Size(width, height)));
-                }
+            Assert.That(() => c.PutNextRectangle(new Size(100500, 500100)), Throws.Exception);
 
-                var step = 0.1;
-
-                for (var angle = 0.0; angle < countRectangle * countRectangle; angle += step)
-                {
-
-                   setExpectedRectangles.Add(BuildRectangle(new Size(width, height), angle));
-                }
-
-            }
-            setActualRectangles.Distinct().Should().BeSubsetOf(setExpectedRectangles.Distinct());
-            setActualRectangles.Distinct().Count().Should().Be(countRectangle/ countDifferentRepresentative * countDifferentRepresentative);
 
         }
 
+        [Test]
+        public void BuildSqares()
+        {
+            var sideSqare = 2;
+
+            var c = new CircularCloudLayouter(new Point(5, 5), 10, 10 );
+
+            var rectangleSize = new Size(sideSqare, sideSqare);
+            var expectedSqares = new List<Rectangle>()
+            {
+                new Rectangle(new Point(4, 4), rectangleSize),
+                new Rectangle(new Point(2, 5), rectangleSize),
+                new Rectangle(new Point(0, 4), rectangleSize),
+                new Rectangle(new Point(0, 2), rectangleSize),
+                new Rectangle(new Point(1, 0), rectangleSize),
+                new Rectangle(new Point(7, 0), rectangleSize)
+            };
+
+            var actualSqares = new List<Rectangle>();
+
+            for (int i = 0; i < 6; i++)
+            {
+                actualSqares.Add(c.PutNextRectangle(rectangleSize));
+            }
+            actualSqares.Should().Equal(expectedSqares);
+        }
+
+        [Test]
+        public void BuildDifferentRenctangles()
+        {
+            var c = new CircularCloudLayouter(new Point(5, 5), 10, 10);
+            var sizeRectangles = new List<Size>()
+            {
+                new Size(3, 2),
+                new Size(2, 4),
+                new Size(1, 1),
+                new Size(2, 2), 
+                new Size(4, 1)
+
+            };
+
+            var expectedRectangles = new List<Rectangle>()
+            {
+                new Rectangle(new Point(4, 4),sizeRectangles[0] ),
+                new Rectangle(new Point(2, 4), sizeRectangles[1]),
+                new Rectangle(new Point(5, 6), sizeRectangles[2]),
+                new Rectangle(new Point(0, 4), sizeRectangles[3]),
+                new Rectangle(new Point(0, 2), sizeRectangles[4])
+
+            };
+
+            var actualRectangles = new List<Rectangle>();
+            foreach (var size in sizeRectangles)
+            {
+                actualRectangles.Add(c.PutNextRectangle(size));
+            }
+            actualRectangles.Should().Equal(expectedRectangles);
+        }
     }
 
     public class CircularCloudLayouter
     {
-        public Point centerCloud;
 
-        public List<Rectangle> BuiltRectangles;
+        private readonly List<Rectangle> builtRectangles;
+        private List<Point> spiralPoints;
+        private Rectangle window;
 
-        private double step;
-
-        public CircularCloudLayouter(Point center)
+        private void PutPointsOnSpiral(Point centerWindow)
         {
-            centerCloud = center;
-            BuiltRectangles = new List<Rectangle>();
+            spiralPoints = new List<Point>();
+            var step = 0.0;
+            while (true)
+            {
+                var x = (int)(step * Math.Cos(step) + centerWindow.X);
+                var y = (int)(step * Math.Sin(step) + centerWindow.Y);
+
+                if (SpiralGoingOutWindow(x, y))
+                {
+                    spiralPoints = spiralPoints.Distinct().ToList();
+                    break;
+                }
+                step += 0.1;
+                spiralPoints.Add(new Point(x, y));
+            }
         }
+
+        private bool SpiralGoingOutWindow(int x, int y)
+        {
+            return x < 0 && y < 0;
+        }
+
+        public CircularCloudLayouter(Point centerWindow, int widthWindow, int heightWindow)
+        {
+            builtRectangles = new List<Rectangle>();
+            PutPointsOnSpiral(centerWindow);
+            window = new Rectangle(new Point(0, 0), new Size(widthWindow, heightWindow) );
+        }
+
 
         public Rectangle PutNextRectangle(Size rectangleSize)
         {
 
-            while (true)
+            foreach (var spiralPoint in spiralPoints)
             {
-                var rectangle = new Rectangle(CalculateCenterNewRectangle(rectangleSize), rectangleSize);
-                if (!BuiltRectangles.Any(rec => rec.IntersectsWith(rectangle)))
+                var location = CalculateLocationRectangle(rectangleSize, spiralPoint);
+                var rectangle = new Rectangle(location, rectangleSize);
+                if (IsCorrectLocation(rectangle))
                 {
-                    BuiltRectangles.Add(rectangle);
-                    break;
+                    builtRectangles.Add(rectangle);
+                    return rectangle;
                 }
             }
-            return BuiltRectangles.Last();
+            throw  new Exception("Cloud is full");
         }
 
-        private Point CalculateCenterNewRectangle(Size rectangleSize)
-        {
-            step += 0.1;
-            var x = step * Math.Cos(step) + centerCloud.X + rectangleSize.Width / 2;
-            var y = step * Math.Sin(step) + centerCloud.Y + rectangleSize.Height / 2;
-            return new Point((int) x, (int) y);
 
+        private Point CalculateLocationRectangle(Size rectangleSize, Point spiralPoint)
+        {
+           return new Point()
+           {
+               X = spiralPoint.X - rectangleSize.Width / 2,
+               Y = spiralPoint.Y - rectangleSize.Height / 2
+           };
+        }
+
+        private bool IsCorrectLocation(Rectangle rectangle)
+        {
+            var notIntersection = !builtRectangles.Any(rec => rec.IntersectsWith(rectangle));
+
+            var outside = rectangle.X >= 0 && rectangle.Right <= window.Width
+                          && rectangle.Y >= 0 && rectangle.Bottom <= window.Height;
+            return notIntersection && outside;
         }
 
     }

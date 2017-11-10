@@ -13,16 +13,14 @@ namespace WindowsFormsApp1
     {
 
         public Point center = new Point(350, 250);
-        Font font1 = new Font("Arial", 12, FontStyle.Bold, GraphicsUnit.Point);
 
         public void DrawRectangle(Rectangle rec, Graphics graphics, int count)
         {
-            graphics.DrawString(count.ToString(), font1, Brushes.Black,rec);
             graphics.DrawRectangle(Pens.Red, rec);
         }   
 
         private Random rnd = new Random();
-        private CircularCloudLayouter cloudTag = new CircularCloudLayouter(new Point(400, 300));
+        private CircularCloudLayouter cloudTag;
         private int cl;
         public void drawRectangle(int width, int height)
         {
@@ -31,13 +29,12 @@ namespace WindowsFormsApp1
             var rec = cloudTag.PutNextRectangle(size);
             Graphics graphics = this.CreateGraphics();
             graphics.DrawRectangle(Pens.Red, rec);
-            graphics.DrawString(cl.ToString(), font1, Brushes.Black, rec);
         }
 
         public MyForm(int width, int height)
         {
             this.Size = new Size(width, height);
-
+            cloudTag = new CircularCloudLayouter(new Point(350, 250), 600, 400);
             var textBoxWidh = new TextBox
             {
                 Location = new Point(10, 10),
@@ -74,12 +71,12 @@ namespace WindowsFormsApp1
             buttonAdd.Click += (sender, args) => drawRectangle(int.Parse(textBoxWidh.Text),
                 Int32.Parse(textBoxHeight.Text));
 
-            buttonAddRandom.Click += (sender, args) => drawRectangle(rnd.Next(10, 100), rnd.Next(10, 100));
+            buttonAddRandom.Click += (sender, args) => drawRectangle(rnd.Next(2, 100), rnd.Next(2, 100));
             buttonClear.Click += (sender, args) =>
             {
                 Graphics graphics = this.CreateGraphics();
                 graphics.Clear(Color.WhiteSmoke);
-                cloudTag = new CircularCloudLayouter(center);
+                cloudTag = new CircularCloudLayouter(center, this.Size.Width, this.Size.Height);
 
             };
 
